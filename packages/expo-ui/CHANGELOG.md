@@ -6,6 +6,8 @@
 
 ### 🎉 New features
 
+- [universal] Automatically wrap standalone universal components in `Host` and recommend grouping adjacent universal components in one `Host` for better performance.
+
 ### 🐛 Bug fixes
 
 ### 💡 Others
