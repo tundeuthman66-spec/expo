@@ -6,7 +6,7 @@
 
 ### 🎉 New features
 
-- [universal] Automatically wrap standalone universal components in `Host` and recommend grouping adjacent universal components in one `Host` for better performance.
+- [universal] Automatically wrap standalone universal components in `Host` and recommend grouping adjacent universal components in one `Host` for better performance. ([#46549](https://github.com/expo/expo/pull/46549) by [@chrfalch](https://github.com/chrfalch))
 
 ### 🐛 Bug fixes
 
