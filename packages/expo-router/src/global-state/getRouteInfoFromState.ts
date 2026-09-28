@@ -57,7 +57,7 @@ export function getRouteInfoFromState(state?: StrictState): UrlObject {
 
   // TODO(@kitten): Review edge-case type safety
   const index = 'index' in state ? (state.index ?? 0) : 0;
-  let route = state.routes[index]!;
+  const route = state.routes[index]!;
   warnIfNestedParams(route.params);
 
   if (route.name === NOT_FOUND_ROUTE_NAME || route.name === SITEMAP_ROUTE_NAME) {
@@ -75,13 +75,31 @@ export function getRouteInfoFromState(state?: StrictState): UrlObject {
     throw new Error(`Expected the first route to be ${INTERNAL_SLOT_NAME}, but got ${route.name}`);
   }
 
-  state = route.state;
+  const { segments, params: mergedParams } = collectRouteState(route.state);
+  const params = decodeParams(mergedParams);
+  const { pathname, pathParams } = resolvePathname(segments, params);
+  const { searchParams, pathnameWithParams } = serializeQueryAndHash(pathname, params, pathParams);
 
+  return {
+    segments,
+    pathname,
+    // Navigation params can contain ordinary object values at runtime despite the public search-param type.
+    // TODO: address this together with other params serialization issues
+    params: params as UrlObject['params'],
+    unstable_globalHref: appendBaseUrl(pathnameWithParams),
+    searchParams,
+    pathnameWithParams,
+    // TODO: Remove this, it is not used anywhere
+    isIndex: false,
+  };
+}
+
+function collectRouteState(state?: StrictState) {
   const segments: string[] = [];
-  let params: Record<string, unknown> = Object.create(null);
+  const params: Record<string, unknown> = Object.create(null);
 
   while (state) {
-    route = state.routes['index' in state && state.index ? state.index : 0]!;
+    const route = state.routes['index' in state && state.index ? state.index : 0]!;
     warnIfNestedParams(route.params);
 
     Object.assign(params, route.params);
@@ -95,7 +113,15 @@ export function getRouteInfoFromState(state?: StrictState): UrlObject {
     state = route.state;
   }
 
-  params = Object.fromEntries(
+  if (segments[segments.length - 1] === 'index') {
+    segments.pop();
+  }
+
+  return { segments, params };
+}
+
+function decodeParams(params: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
     Object.entries(params).map(([key, value]) => {
       if (typeof value === 'string') {
         return [key, safeDecodeURIComponent(value)];
@@ -106,13 +132,10 @@ export function getRouteInfoFromState(state?: StrictState): UrlObject {
       }
     })
   );
+}
 
-  if (segments[segments.length - 1] === 'index') {
-    segments.pop();
-  }
-
+function resolvePathname(segments: readonly string[], params: Record<string, unknown>) {
   const pathParams = new Set<string>();
-
   const pathname =
     '/' +
     segments
@@ -163,6 +186,14 @@ export function getRouteInfoFromState(state?: StrictState): UrlObject {
       })
       .join('/');
 
+  return { pathname, pathParams };
+}
+
+function serializeQueryAndHash(
+  pathname: string,
+  params: Record<string, unknown>,
+  pathParams: Set<string>
+) {
   const searchParams = new URLSearchParams(
     Object.entries(params).flatMap(([key, value]) => {
       // Search params should not include path params
@@ -188,18 +219,7 @@ export function getRouteInfoFromState(state?: StrictState): UrlObject {
   let pathnameWithParams = searchParamString ? pathname + '?' + searchParamString : pathname;
   pathnameWithParams = hash ? pathnameWithParams + '#' + hash : pathnameWithParams;
 
-  return {
-    segments,
-    pathname,
-    // Navigation params can contain ordinary object values at runtime despite the public search-param type.
-    // TODO: address this together with other params serialization issues
-    params: params as UrlObject['params'],
-    unstable_globalHref: appendBaseUrl(pathnameWithParams),
-    searchParams,
-    pathnameWithParams,
-    // TODO: Remove this, it is not used anywhere
-    isIndex: false,
-  };
+  return { searchParams, pathnameWithParams };
 }
 
 function isSerializableParam(value: unknown): boolean {
