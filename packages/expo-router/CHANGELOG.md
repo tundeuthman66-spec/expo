@@ -4,7 +4,7 @@
 
 ### 🛠 Breaking changes
 
-- Use `URLSearchParams` for navigation-state query strings instead of `query-string`. ([#50725](https://github.com/expo/expo/pull/50725) by [@Ubax](https://github.com/Ubax))
+- Generated route query strings now encode spaces as `+`, leave `*` unescaped, encode `~` as `%7E`, and write raw null values as `key=`. ([#50725](https://github.com/expo/expo/pull/50725) by [@Ubax](https://github.com/Ubax))
 
 ### 🎉 New features
 
